@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.db.User;
 import com.example.db.UserRepository;
+import com.example.db.UserRole;
 
 @Service
 public class UserService {
@@ -14,8 +15,15 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
-    public void create(String username, String password){
-        userRepository.save(new User(username, password));
+    public boolean create(String username, String password, UserRole role){
+        Optional<User> userOptional = userRepository.findById(username);
+        
+        if (userOptional.isPresent()){
+            return false;
+        }
+
+        userRepository.save(new User(username, password, role));
+        return true;
     }
 
     public boolean delete(String username, String password){
@@ -38,7 +46,7 @@ public class UserService {
 
     public User get(String username, String password){
         Optional<User> userOptional = userRepository.findById(username);
-        
+
         if (!userOptional.isPresent()){
             return null;
         }

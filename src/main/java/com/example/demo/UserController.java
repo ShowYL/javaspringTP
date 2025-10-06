@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.controller.UserService;
 import com.example.db.User;
+import com.example.db.UserRole;
 
 @RestController
 @EnableJpaRepositories("com.example.db")
@@ -28,8 +29,15 @@ public class UserController {
 
     @PostMapping("/user/create")
     public @ResponseBody ResponseEntity<Object> createUser(@RequestParam String username,
-            @RequestParam String password) {
-        userService.create(username, password);
+            @RequestParam String password, @RequestParam UserRole role) {
+        boolean success = userService.create(username, password, role);
+
+        if (!success) {
+            Map<String, String> data = new HashMap<>();
+            data.put("status", "failure");
+            return new ResponseEntity<>(data, HttpStatus.BAD_REQUEST);
+        }
+
         Map<String, String> data = new HashMap<>();
         data.put("status", "success");
         data.put("username", username);
@@ -49,7 +57,7 @@ public class UserController {
 
         Map<String, String> data = new HashMap<>();
         data.put("status", "failure");
-        return new ResponseEntity<>(data, HttpStatus.OK);
+        return new ResponseEntity<>(data, HttpStatus.BAD_REQUEST);
     }
 
     @GetMapping("/user")
@@ -65,7 +73,7 @@ public class UserController {
 
         Map<String, String> data = new HashMap<>();
         data.put("status", "failure");
-        return new ResponseEntity<>(data, HttpStatus.OK);
+        return new ResponseEntity<>(data, HttpStatus.BAD_REQUEST);
     }
 
 }
