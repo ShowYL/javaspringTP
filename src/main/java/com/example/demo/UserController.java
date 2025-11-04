@@ -2,45 +2,41 @@ package com.example.demo;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.persistence.autoconfigure.EntityScan;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.controller.UserService;
 import com.example.db.User;
-import com.example.db.UserRole;
+import com.example.request.UserRequest;
+import com.example.request.Utils;
 
 @RestController
-@EnableJpaRepositories("com.example.db")
-@EntityScan("com.example.db")
 public class UserController {
 
     @Autowired
     private UserService userService;
 
     @PostMapping("/user/create")
-    public @ResponseBody ResponseEntity<Object> createUser(@RequestParam String username,
-            @RequestParam String password, @RequestParam UserRole role) {
-        boolean success = userService.create(username, password, role);
+    public @ResponseBody ResponseEntity<Object> createUser(@RequestBody UserRequest request) {
+        boolean success = userService.create(request.getUsername(), request.getPassword(), request.getRole());
 
         if (!success) {
-            Map<String, String> data = new HashMap<>();
-            data.put("status", "failure");
-            return new ResponseEntity<>(data, HttpStatus.BAD_REQUEST);
+            return Utils.returnFailure();
         }
 
         Map<String, String> data = new HashMap<>();
         data.put("status", "success");
-        data.put("username", username);
+        data.put("username", request.getUsername());
         return new ResponseEntity<>(data, HttpStatus.OK);
     }
 
@@ -49,31 +45,27 @@ public class UserController {
             @RequestParam String password) {
         boolean success = userService.delete(username, password);
 
-        if (success) {
-            Map<String, String> data = new HashMap<>();
-            data.put("status", "success");
-            return new ResponseEntity<>(data, HttpStatus.OK);
+        if (!success) {
+            return Utils.returnFailure();
         }
 
         Map<String, String> data = new HashMap<>();
-        data.put("status", "failure");
-        return new ResponseEntity<>(data, HttpStatus.BAD_REQUEST);
+        data.put("status", "success");
+        return new ResponseEntity<>(data, HttpStatus.OK);
     }
 
     @GetMapping("/user")
     public @ResponseBody ResponseEntity<Object> getUser(@RequestParam String username, @RequestParam String password) {
-        User user = userService.get(username, password);
+        Optional<User> userOptional = userService.get(username, password);
 
-        if (user != null) {
-            Map<String, String> data = new HashMap<>();
-            data.put("status", "success");
-            data.put("username", user.getUsername());
-            return new ResponseEntity<>(data, HttpStatus.OK);
+        if (!userOptional.isPresent()) {
+            return Utils.returnFailure();
         }
 
         Map<String, String> data = new HashMap<>();
-        data.put("status", "failure");
-        return new ResponseEntity<>(data, HttpStatus.BAD_REQUEST);
+        data.put("status", "success");
+        data.put("username", userOptional.get().getUsername());
+        return new ResponseEntity<>(data, HttpStatus.OK);
     }
 
 }
