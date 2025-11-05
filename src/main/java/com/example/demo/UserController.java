@@ -49,9 +49,7 @@ public class UserController {
             return Utils.returnFailure();
         }
 
-        Map<String, String> data = new HashMap<>();
-        data.put("status", "success");
-        return new ResponseEntity<>(data, HttpStatus.OK);
+        return Utils.returnSuccess();
     }
 
     @GetMapping("/user")

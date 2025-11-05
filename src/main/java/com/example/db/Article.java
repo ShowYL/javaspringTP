@@ -1,12 +1,16 @@
 package com.example.db;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 
 @Entity
@@ -23,6 +27,22 @@ public class Article {
     private LocalDateTime date;
 
     private String content;
+
+    @ManyToMany
+    @JoinTable(
+        name = "article_likes",
+        joinColumns = @JoinColumn(name = "article_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> likes = new HashSet<User>();
+
+    @ManyToMany
+    @JoinTable(
+        name = "article_dislikes",
+        joinColumns = @JoinColumn(name = "article_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> dislikes = new HashSet<>();
 
     public Article(User author, String content){
         this.author = author;
@@ -48,6 +68,14 @@ public class Article {
         return this.content;
     }
 
+    public Set<User> getLikes(){
+        return this.likes;
+    }
+
+    public Set<User> getDislikes(){
+        return this.dislikes;
+    }
+
     public Article setAuthor(User username){
         this.author = username;
         return this;
@@ -61,6 +89,34 @@ public class Article {
     public Article setContent(String content){
         this.content = content;
         return this;
+    }
+
+    public void toggleLike(User user) {
+        if (this.likes.contains(user)){
+            this.likes.remove(user);
+            return;
+        }
+
+        this.likes.add(user);
+        this.dislikes.remove(user);
+    }
+
+    public void toggleDislike(User user){
+        if (this.dislikes.contains(user)){
+            this.dislikes.remove(user);
+            return;
+        }
+
+        this.dislikes.add(user);
+        this.likes.remove(user);
+    }
+
+    public Integer getLikesCount(){
+        return this.likes.size();
+    }
+
+    public Integer getDislikesCount(){
+        return this.dislikes.size();
     }
 
 }

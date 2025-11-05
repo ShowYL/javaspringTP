@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.controller.ArticleService;
 import com.example.db.Article;
 import com.example.request.ArticleRequest;
+import com.example.request.Like;
 import com.example.request.Utils;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -55,24 +56,12 @@ public class ArticleController {
             return Utils.returnFailure();
         }
 
-        HashMap<String, String> data = new HashMap<String, String>();
-        data.put("status", "success");
-        return new ResponseEntity<>(data, HttpStatus.OK);
+        return Utils.returnSuccess();
     }
 
     @GetMapping("/article/{id}")
-    public @ResponseBody ResponseEntity<Object> get(@PathVariable String id) {
-        Integer idInt;
-        try {
-            idInt = Integer.valueOf(id);
-        } catch (NumberFormatException e) {
-            HashMap<String, String> data = new HashMap<String, String>();
-            data.put("status", "failure");
-            data.put("error", "invalid id");
-            return new ResponseEntity<>(data, HttpStatus.BAD_REQUEST);
-        }
-
-        Optional<Article> articleOptional = articleService.get(idInt);
+    public @ResponseBody ResponseEntity<Object> get(@PathVariable Integer id) {
+        Optional<Article> articleOptional = articleService.get(id);
 
         if (!articleOptional.isPresent()) {
             return Utils.returnFailure();
@@ -88,18 +77,8 @@ public class ArticleController {
     }
 
     @PutMapping("article/{id}")
-    public @ResponseBody ResponseEntity<Object> modify(@PathVariable String id, @RequestBody ArticleRequest request) {
-        Integer idInt;
-        try {
-            idInt = Integer.valueOf(id);
-        } catch (NumberFormatException e) {
-            HashMap<String, String> data = new HashMap<String, String>();
-            data.put("status", "failure");
-            data.put("error", "invalid id");
-            return new ResponseEntity<>(data, HttpStatus.BAD_REQUEST);
-        }
-
-        Optional<Article> articleOptional = articleService.modify(idInt, request.getContent(), request.getPassword());
+    public @ResponseBody ResponseEntity<Object> modify(@PathVariable Integer id, @RequestBody ArticleRequest request) {
+        Optional<Article> articleOptional = articleService.modify(id, request.getContent(), request.getPassword());
 
         if (!articleOptional.isPresent()) {
             return Utils.returnFailure();
@@ -131,4 +110,54 @@ public class ArticleController {
         return new ResponseEntity<>(data, HttpStatus.OK);
     }
 
+    @PostMapping("/article/{id}/like")
+    public @ResponseBody ResponseEntity<Object> like(@PathVariable Integer id, @RequestBody Like request ) {
+        boolean success = articleService.like(id, request.getUsername(), request.getPassword());
+
+        if (!success){
+            return Utils.returnFailure();
+        }
+
+        return Utils.returnSuccess();
+    }
+
+    @PostMapping("/article/{id}/dislike")
+    public @ResponseBody ResponseEntity<Object> dislike(@PathVariable Integer id, @RequestBody Like request ){
+        boolean success = articleService.dislike(id, request.getUsername(), request.getPassword());
+
+        if (!success){
+            return Utils.returnFailure();
+        }
+
+        return Utils.returnSuccess();
+    }
+
+    @GetMapping("/article/{id}/like")
+    public @ResponseBody ResponseEntity<Object> likeCount(@PathVariable Integer id) {
+        Optional<Integer> integerOptional = articleService.getLikesCount(id);
+
+        if (!integerOptional.isPresent()){
+            return Utils.returnFailure();
+        }
+
+        HashMap<String, String> data = new HashMap<String, String>();
+        data.put("status", "success");
+        data.put("likes", integerOptional.get().toString());
+        return new ResponseEntity<>(data, HttpStatus.OK);
+    }
+
+    @GetMapping("/article/{id}/dislike")
+    public @ResponseBody ResponseEntity<Object> dislikeCount(@PathVariable Integer id) {
+        Optional<Integer> integerOptional = articleService.getDislikesCount(id);
+
+        if (!integerOptional.isPresent()){
+            return Utils.returnFailure();
+        }
+
+        HashMap<String, String> data = new HashMap<String, String>();
+        data.put("status", "success");
+        data.put("likes", integerOptional.get().toString());
+        return new ResponseEntity<>(data, HttpStatus.OK);
+    }
+    
 }

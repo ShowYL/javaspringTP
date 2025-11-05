@@ -90,4 +90,70 @@ public class ArticleService {
 
         return Optional.of(articleRepository.save(article));
     }
+
+    public boolean like(Integer id, String authorUsername, String authorPassword){
+        Optional<User> userOptional = userService.get(authorUsername, authorPassword);
+
+        if (!userOptional.isPresent()){
+            return false;
+        }
+
+        Optional<Article> articleOptional = articleRepository.findById(id);
+
+        if (!articleOptional.isPresent()){
+            return false;
+        }
+
+        Article article = articleOptional.get();
+        User user = userOptional.get();
+
+        article.toggleLike(user);
+        articleRepository.save(article);
+        return true;
+    }
+
+    public boolean dislike(Integer id, String authorUsername, String authorPassword){
+        Optional<User> userOptional = userService.get(authorUsername, authorPassword);
+
+        if (!userOptional.isPresent()){
+            return false;
+        }
+
+        Optional<Article> articleOptional = articleRepository.findById(id);
+
+        if (!articleOptional.isPresent()){
+            return false;
+        }
+
+        Article article = articleOptional.get();
+        User user = userOptional.get();
+
+        article.toggleDislike(user);
+        articleRepository.save(article);
+        return true;
+    }
+
+    public Optional<Integer> getLikesCount(Integer id){
+        Optional<Article> articleOptional = articleRepository.findById(id);
+
+        if (!articleOptional.isPresent()){
+            return Optional.empty();
+        }
+
+        Article article = articleOptional.get();
+
+        return Optional.of(article.getLikesCount());
+    }
+
+    public Optional<Integer> getDislikesCount(Integer id){
+        Optional<Article> articleOptional = articleRepository.findById(id);
+
+        if (!articleOptional.isPresent()){
+            return Optional.empty();
+        }
+
+        Article article = articleOptional.get();
+
+        return Optional.of(article.getDislikesCount());
+    }
 }
