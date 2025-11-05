@@ -34,3 +34,6 @@ build/
 
 # Docker Volume
 db/
+
+# to keep
+!src/main/java/com/example/db
