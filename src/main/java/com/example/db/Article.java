@@ -1,7 +1,6 @@
 package com.example.db;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.Set;
 
 import jakarta.persistence.Entity;
@@ -17,7 +16,7 @@ import jakarta.persistence.ManyToOne;
 public class Article {
 
     @Id
-    @GeneratedValue(strategy=GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @ManyToOne
@@ -29,70 +28,63 @@ public class Article {
     private String content;
 
     @ManyToMany
-    @JoinTable(
-        name = "article_likes",
-        joinColumns = @JoinColumn(name = "article_id"),
-        inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    private Set<User> likes = new HashSet<User>();
+    @JoinTable(name = "article_likes", joinColumns = @JoinColumn(name = "article_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
+    private Set<User> likes;
 
     @ManyToMany
-    @JoinTable(
-        name = "article_dislikes",
-        joinColumns = @JoinColumn(name = "article_id"),
-        inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    private Set<User> dislikes = new HashSet<>();
+    @JoinTable(name = "article_dislikes", joinColumns = @JoinColumn(name = "article_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
+    private Set<User> dislikes;
 
-    public Article(User author, String content){
+    public Article(User author, String content) {
         this.author = author;
         this.content = content;
         this.date = LocalDateTime.now();
     }
 
-    public Article(){}
+    public Article() {
+    }
 
-    public Integer getID(){
+    public Integer getID() {
         return this.id;
     }
 
-    public User getAuthor(){
+    public User getAuthor() {
         return this.author;
     }
 
-    public LocalDateTime getDate(){
+    public LocalDateTime getDate() {
         return this.date;
     }
 
-    public String getContent(){
+    public String getContent() {
         return this.content;
     }
 
-    public Set<User> getLikes(){
+    public Set<User> getLikes() {
         return this.likes;
     }
 
-    public Set<User> getDislikes(){
+    public Set<User> getDislikes() {
         return this.dislikes;
     }
 
-    public Article setAuthor(User username){
+    public Article setAuthor(User username) {
         this.author = username;
         return this;
     }
 
-    public Article setDate(LocalDateTime date){
+    public Article setDate(LocalDateTime date) {
         this.date = date;
         return this;
     }
 
-    public Article setContent(String content){
+    public Article setContent(String content) {
         this.content = content;
         return this;
     }
 
     public void toggleLike(User user) {
-        if (this.likes.contains(user)){
+        if (this.likes.contains(user)) {
             this.likes.remove(user);
             return;
         }
@@ -101,8 +93,8 @@ public class Article {
         this.dislikes.remove(user);
     }
 
-    public void toggleDislike(User user){
-        if (this.dislikes.contains(user)){
+    public void toggleDislike(User user) {
+        if (this.dislikes.contains(user)) {
             this.dislikes.remove(user);
             return;
         }
@@ -111,12 +103,11 @@ public class Article {
         this.likes.remove(user);
     }
 
-    public Integer getLikesCount(){
+    public Integer getLikesCount() {
         return this.likes.size();
     }
 
-    public Integer getDislikesCount(){
+    public Integer getDislikesCount() {
         return this.dislikes.size();
     }
-
 }

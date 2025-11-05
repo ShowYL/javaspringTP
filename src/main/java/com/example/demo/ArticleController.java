@@ -2,6 +2,7 @@ package com.example.demo;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -111,10 +112,10 @@ public class ArticleController {
     }
 
     @PostMapping("/article/{id}/like")
-    public @ResponseBody ResponseEntity<Object> like(@PathVariable Integer id, @RequestBody Like request ) {
+    public @ResponseBody ResponseEntity<Object> like(@PathVariable Integer id, @RequestBody Like request) {
         boolean success = articleService.like(id, request.getUsername(), request.getPassword());
 
-        if (!success){
+        if (!success) {
             return Utils.returnFailure();
         }
 
@@ -122,10 +123,10 @@ public class ArticleController {
     }
 
     @PostMapping("/article/{id}/dislike")
-    public @ResponseBody ResponseEntity<Object> dislike(@PathVariable Integer id, @RequestBody Like request ){
+    public @ResponseBody ResponseEntity<Object> dislike(@PathVariable Integer id, @RequestBody Like request) {
         boolean success = articleService.dislike(id, request.getUsername(), request.getPassword());
 
-        if (!success){
+        if (!success) {
             return Utils.returnFailure();
         }
 
@@ -133,31 +134,32 @@ public class ArticleController {
     }
 
     @GetMapping("/article/{id}/like")
-    public @ResponseBody ResponseEntity<Object> likeCount(@PathVariable Integer id) {
-        Optional<Integer> integerOptional = articleService.getLikesCount(id);
+    public @ResponseBody ResponseEntity<Object> like(@PathVariable Integer id) {
+        Optional<Map<String, Object>> likesOptional = articleService.getLikes(id);
 
-        if (!integerOptional.isPresent()){
+        if (!likesOptional.isPresent()) {
             return Utils.returnFailure();
         }
 
-        HashMap<String, String> data = new HashMap<String, String>();
+        HashMap<String, Object> data = new HashMap<String, Object>();
         data.put("status", "success");
-        data.put("likes", integerOptional.get().toString());
+        data.putAll(likesOptional.get());
+
         return new ResponseEntity<>(data, HttpStatus.OK);
     }
 
     @GetMapping("/article/{id}/dislike")
-    public @ResponseBody ResponseEntity<Object> dislikeCount(@PathVariable Integer id) {
-        Optional<Integer> integerOptional = articleService.getDislikesCount(id);
+    public @ResponseBody ResponseEntity<Object> dislike(@PathVariable Integer id) {
+        Optional<Map<String, Object>> dislikesOptional = articleService.getDislikes(id);
 
-        if (!integerOptional.isPresent()){
+        if (!dislikesOptional.isPresent()) {
             return Utils.returnFailure();
         }
 
-        HashMap<String, String> data = new HashMap<String, String>();
+        HashMap<String, Object> data = new HashMap<String, Object>();
         data.put("status", "success");
-        data.put("likes", integerOptional.get().toString());
+        data.putAll(dislikesOptional.get());
+
         return new ResponseEntity<>(data, HttpStatus.OK);
     }
-    
 }

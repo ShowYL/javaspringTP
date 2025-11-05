@@ -2,7 +2,9 @@ package com.example.controller;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,7 +62,7 @@ public class ArticleService {
         return Optional.of(articleOptional.get());
     }
 
-    public List<Article> get(String authorUsername){
+    public List<Article> get(String authorUsername) {
         ArrayList<Article> list = this.getAll();
         return list.stream().filter(e -> e.getAuthor().getUsername().equals(authorUsername)).toList();
     }
@@ -91,16 +93,16 @@ public class ArticleService {
         return Optional.of(articleRepository.save(article));
     }
 
-    public boolean like(Integer id, String authorUsername, String authorPassword){
+    public boolean like(Integer id, String authorUsername, String authorPassword) {
         Optional<User> userOptional = userService.get(authorUsername, authorPassword);
 
-        if (!userOptional.isPresent()){
+        if (!userOptional.isPresent()) {
             return false;
         }
 
         Optional<Article> articleOptional = articleRepository.findById(id);
 
-        if (!articleOptional.isPresent()){
+        if (!articleOptional.isPresent()) {
             return false;
         }
 
@@ -112,16 +114,16 @@ public class ArticleService {
         return true;
     }
 
-    public boolean dislike(Integer id, String authorUsername, String authorPassword){
+    public boolean dislike(Integer id, String authorUsername, String authorPassword) {
         Optional<User> userOptional = userService.get(authorUsername, authorPassword);
 
-        if (!userOptional.isPresent()){
+        if (!userOptional.isPresent()) {
             return false;
         }
 
         Optional<Article> articleOptional = articleRepository.findById(id);
 
-        if (!articleOptional.isPresent()){
+        if (!articleOptional.isPresent()) {
             return false;
         }
 
@@ -133,27 +135,49 @@ public class ArticleService {
         return true;
     }
 
-    public Optional<Integer> getLikesCount(Integer id){
+    public Optional<Map<String, Object>> getLikes(Integer id) {
         Optional<Article> articleOptional = articleRepository.findById(id);
 
-        if (!articleOptional.isPresent()){
+        if (!articleOptional.isPresent()) {
             return Optional.empty();
         }
 
         Article article = articleOptional.get();
 
-        return Optional.of(article.getLikesCount());
+        HashMap<String, Object> map = new HashMap<>();
+        map.put("count", article.getLikesCount());
+
+        ArrayList<String> usernames = new ArrayList<>();
+
+        for (User user : article.getLikes()) {
+            usernames.add(user.getUsername());
+        }
+
+        map.put("users", usernames);
+
+        return Optional.of(map);
     }
 
-    public Optional<Integer> getDislikesCount(Integer id){
+    public Optional<Map<String, Object>> getDislikes(Integer id) {
         Optional<Article> articleOptional = articleRepository.findById(id);
 
-        if (!articleOptional.isPresent()){
+        if (!articleOptional.isPresent()) {
             return Optional.empty();
         }
 
         Article article = articleOptional.get();
 
-        return Optional.of(article.getDislikesCount());
+        HashMap<String, Object> map = new HashMap<>();
+        map.put("count", article.getDislikesCount());
+
+        ArrayList<String> usernames = new ArrayList<>();
+
+        for (User user : article.getDislikes()) {
+            usernames.add(user.getUsername());
+        }
+
+        map.put("users", usernames);
+
+        return Optional.of(map);
     }
 }
