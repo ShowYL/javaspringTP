@@ -28,7 +28,7 @@ public class UserController {
 
     @PostMapping("/user/create")
     public @ResponseBody ResponseEntity<Object> createUser(@RequestBody UserRequest request) {
-        boolean success = userService.create(request.getUsername(), request.getPassword(), request.getRole());
+        boolean success = userService.create(request.username(), request.password(), request.role());
 
         if (!success) {
             return Utils.returnFailure();
@@ -36,7 +36,7 @@ public class UserController {
 
         Map<String, String> data = new HashMap<>();
         data.put("status", "success");
-        data.put("username", request.getUsername());
+        data.put("username", request.username());
         return new ResponseEntity<>(data, HttpStatus.OK);
     }
 

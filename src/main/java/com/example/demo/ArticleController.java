@@ -33,8 +33,8 @@ public class ArticleController {
     @PostMapping("/article/create")
     public @ResponseBody ResponseEntity<Object> create(@RequestBody ArticleRequest request) {
 
-        Optional<Article> articleOptional = articleService.create(request.getUsername(),
-                request.getPassword(), request.getContent());
+        Optional<Article> articleOptional = articleService.create(request.username(),
+                request.password(), request.content());
 
         if (!articleOptional.isPresent()) {
             return Utils.returnFailure();
@@ -79,7 +79,7 @@ public class ArticleController {
 
     @PutMapping("article/{id}")
     public @ResponseBody ResponseEntity<Object> modify(@PathVariable Integer id, @RequestBody ArticleRequest request) {
-        Optional<Article> articleOptional = articleService.modify(id, request.getContent(), request.getPassword());
+        Optional<Article> articleOptional = articleService.modify(id, request.content(), request.password());
 
         if (!articleOptional.isPresent()) {
             return Utils.returnFailure();
@@ -113,7 +113,7 @@ public class ArticleController {
 
     @PostMapping("/article/{id}/like")
     public @ResponseBody ResponseEntity<Object> like(@PathVariable Integer id, @RequestBody Like request) {
-        boolean success = articleService.like(id, request.getUsername(), request.getPassword());
+        boolean success = articleService.like(id, request.username(), request.password());
 
         if (!success) {
             return Utils.returnFailure();
@@ -124,7 +124,7 @@ public class ArticleController {
 
     @PostMapping("/article/{id}/dislike")
     public @ResponseBody ResponseEntity<Object> dislike(@PathVariable Integer id, @RequestBody Like request) {
-        boolean success = articleService.dislike(id, request.getUsername(), request.getPassword());
+        boolean success = articleService.dislike(id, request.username(), request.password());
 
         if (!success) {
             return Utils.returnFailure();
