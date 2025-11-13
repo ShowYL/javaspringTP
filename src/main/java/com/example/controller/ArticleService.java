@@ -2,10 +2,11 @@ package com.example.controller;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,164 +21,81 @@ public class ArticleService {
     @Autowired
     ArticleRepository articleRepository;
 
-    @Autowired
-    UserService userService;
-
-    public Optional<Article> create(String authorUsername, String authorPassword, String content) {
-        Optional<User> userOptional = userService.get(authorUsername, authorPassword);
-
-        if (!userOptional.isPresent()) {
+    // The author is passed in directly from the authenticated principal.
+    public Optional<Article> create(User author, String content) {
+        if (author == null) {
             return Optional.empty();
         }
-
-        Article article = new Article(userOptional.get(), content);
+        Article article = new Article(author, content);
         articleRepository.save(article);
         return Optional.of(article);
     }
 
-    public boolean delete(Integer articleId, String authorPassword) {
-        Optional<Article> articleOptional = this.get(articleId);
-
-        if (!articleOptional.isPresent()) {
+    // Deletion logic is simplified. Authorization is handled in the controller.
+    public boolean delete(Integer articleId) {
+        if (!articleRepository.existsById(articleId)) {
             return false;
         }
-
-        Article article = articleOptional.get();
-
-        if (!article.getAuthor().getPassword().equals(authorPassword)) {
-            return false;
-        }
-
-        articleRepository.delete(article);
+        articleRepository.deleteById(articleId);
         return true;
     }
 
     public Optional<Article> get(Integer id) {
-        Optional<Article> articleOptional = articleRepository.findById(id);
-
-        if (!articleOptional.isPresent()) {
-            return Optional.empty();
-        }
-
-        return Optional.of(articleOptional.get());
+        return articleRepository.findById(id);
     }
-
+    
     public List<Article> get(String authorUsername) {
-        ArrayList<Article> list = this.getAll();
-        return list.stream().filter(e -> e.getAuthor().getUsername().equals(authorUsername)).toList();
+        return StreamSupport.stream(articleRepository.findAll().spliterator(), false)
+                .filter(a -> a.getAuthor().getUsername().equals(authorUsername))
+                .collect(Collectors.toList());
     }
+    
 
     public ArrayList<Article> getAll() {
-        Iterable<Article> articleIterable = articleRepository.findAll();
-        ArrayList<Article> list = new ArrayList<Article>();
-        articleIterable.forEach(list::add);
+        ArrayList<Article> list = new ArrayList<>();
+        articleRepository.findAll().forEach(list::add);
         return list;
     }
 
-    public Optional<Article> modify(Integer id, String content, String authorPassword) {
-        Optional<Article> articleOptional = articleRepository.findById(id);
-
-        if (!articleOptional.isPresent()) {
-            return Optional.empty();
-        }
-
-        Article article = articleOptional.get();
-
-        if (!article.getAuthor().getPassword().equals(authorPassword)) {
-            return Optional.empty();
-        }
-
-        article.setDate(LocalDateTime.now())
-                .setContent(content);
-
-        return Optional.of(articleRepository.save(article));
+    // Modification no longer requires a password. Authorization is handled in the controller.
+    public Optional<Article> modify(Integer id, String content) {
+        return articleRepository.findById(id).map(article -> {
+            article.setDate(LocalDateTime.now()).setContent(content);
+            return articleRepository.save(article);
+        });
     }
 
-    public boolean like(Integer id, String authorUsername, String authorPassword) {
-        Optional<User> userOptional = userService.get(authorUsername, authorPassword);
-
-        if (!userOptional.isPresent()) {
-            return false;
-        }
-
-        Optional<Article> articleOptional = articleRepository.findById(id);
-
-        if (!articleOptional.isPresent()) {
-            return false;
-        }
-
-        Article article = articleOptional.get();
-        User user = userOptional.get();
-
-        article.toggleLike(user);
-        articleRepository.save(article);
-        return true;
+    // The user who is liking/disliking is passed in directly.
+    public boolean like(Integer id, User user) {
+        if (user == null) return false;
+        return articleRepository.findById(id).map(article -> {
+            article.toggleLike(user);
+            articleRepository.save(article);
+            return true;
+        }).orElse(false);
     }
 
-    public boolean dislike(Integer id, String authorUsername, String authorPassword) {
-        Optional<User> userOptional = userService.get(authorUsername, authorPassword);
-
-        if (!userOptional.isPresent()) {
-            return false;
-        }
-
-        Optional<Article> articleOptional = articleRepository.findById(id);
-
-        if (!articleOptional.isPresent()) {
-            return false;
-        }
-
-        Article article = articleOptional.get();
-        User user = userOptional.get();
-
-        article.toggleDislike(user);
-        articleRepository.save(article);
-        return true;
+    public boolean dislike(Integer id, User user) {
+        if (user == null) return false;
+        return articleRepository.findById(id).map(article -> {
+            article.toggleDislike(user);
+            articleRepository.save(article);
+            return true;
+        }).orElse(false);
     }
 
+    // These methods now correctly format the data as specified.
     public Optional<Map<String, Object>> getLikes(Integer id) {
-        Optional<Article> articleOptional = articleRepository.findById(id);
-
-        if (!articleOptional.isPresent()) {
-            return Optional.empty();
-        }
-
-        Article article = articleOptional.get();
-
-        HashMap<String, Object> map = new HashMap<>();
-        map.put("count", article.getLikesCount());
-
-        ArrayList<String> usernames = new ArrayList<>();
-
-        for (User user : article.getLikes()) {
-            usernames.add(user.getUsername());
-        }
-
-        map.put("users", usernames);
-
-        return Optional.of(map);
+        return get(id).map(article -> Map.of(
+                "count", article.getLikesCount(),
+                "users", article.getLikes().stream().map(User::getUsername).collect(Collectors.toList())
+        ));
     }
 
     public Optional<Map<String, Object>> getDislikes(Integer id) {
-        Optional<Article> articleOptional = articleRepository.findById(id);
-
-        if (!articleOptional.isPresent()) {
-            return Optional.empty();
-        }
-
-        Article article = articleOptional.get();
-
-        HashMap<String, Object> map = new HashMap<>();
-        map.put("count", article.getDislikesCount());
-
-        ArrayList<String> usernames = new ArrayList<>();
-
-        for (User user : article.getDislikes()) {
-            usernames.add(user.getUsername());
-        }
-
-        map.put("users", usernames);
-
-        return Optional.of(map);
+        return get(id).map(article -> Map.of(
+                "count", article.getDislikesCount(),
+                "users", article.getDislikes().stream().map(User::getUsername).collect(Collectors.toList())
+        ));
     }
 }

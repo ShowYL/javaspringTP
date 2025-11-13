@@ -7,11 +7,12 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,7 +27,7 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    @PostMapping("/user/create")
+    @PostMapping("/user/register")
     public @ResponseBody ResponseEntity<Object> createUser(@RequestBody UserRequest request) {
         boolean success = userService.create(request.username(), request.password(), request.role());
 
@@ -40,10 +41,10 @@ public class UserController {
         return new ResponseEntity<>(data, HttpStatus.OK);
     }
 
-    @DeleteMapping("/user/delete")
-    public @ResponseBody ResponseEntity<Object> deleteUser(@RequestParam String username,
-            @RequestParam String password) {
-        boolean success = userService.delete(username, password);
+    @DeleteMapping("/user/delete/{username}")
+    @PreAuthorize("#username == authentication.principal.username")
+    public @ResponseBody ResponseEntity<Object> deleteUser(@PathVariable String username) {
+        boolean success = userService.delete(username);
 
         if (!success) {
             return Utils.returnFailure();
@@ -52,9 +53,9 @@ public class UserController {
         return Utils.returnSuccess();
     }
 
-    @GetMapping("/user")
-    public @ResponseBody ResponseEntity<Object> getUser(@RequestParam String username, @RequestParam String password) {
-        Optional<User> userOptional = userService.get(username, password);
+    @GetMapping("/user/{username}")
+    public @ResponseBody ResponseEntity<Object> getUser(@PathVariable String username) {
+        Optional<User> userOptional = userService.get(username);
 
         if (!userOptional.isPresent()) {
             return Utils.returnFailure();
@@ -63,7 +64,8 @@ public class UserController {
         Map<String, String> data = new HashMap<>();
         data.put("status", "success");
         data.put("username", userOptional.get().getUsername());
+        data.put("role", userOptional.get().getRole().name());
         return new ResponseEntity<>(data, HttpStatus.OK);
     }
-
+    
 }

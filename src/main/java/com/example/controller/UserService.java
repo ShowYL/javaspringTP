@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.db.Article;
@@ -21,18 +22,19 @@ public class UserService {
     @Autowired
     private ArticleRepository articleRepository;
 
-    public boolean create(String username, String password, UserRole role) {
-        Optional<User> userOptional = userRepository.findById(username);
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
-        if (userOptional.isPresent()) {
+    public boolean create(String username, String password, UserRole role) {
+        if (userRepository.existsById(username)) {
             return false;
         }
-
-        userRepository.save(new User(username, password, role));
+        
+        userRepository.save(new User(username, passwordEncoder.encode(password), role));
         return true;
     }
 
-    public boolean delete(String username, String password) {
+    public boolean delete(String username) {
         Optional<User> userOptional = userRepository.findById(username);
 
         if (!userOptional.isPresent()) {
@@ -49,27 +51,11 @@ public class UserService {
             return false;
         }
 
-        if (!user.getPassword().equals(password)) {
-            return false;
-        }
-
         userRepository.delete(user);
         return true;
     }
 
-    public Optional<User> get(String username, String password) {
-        Optional<User> userOptional = userRepository.findById(username);
-
-        if (!userOptional.isPresent()) {
-            return Optional.empty();
-        }
-
-        User user = userOptional.get();
-
-        if (!user.getPassword().equals(password)) {
-            return Optional.empty();
-        }
-
-        return Optional.of(user);
+    public Optional<User> get(String username) {
+        return userRepository.findById(username);
     }
 }

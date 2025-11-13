@@ -3,22 +3,26 @@ package com.example.demo;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.controller.ArticleService;
+import com.example.controller.UserService;
 import com.example.db.Article;
+import com.example.db.User;
+import com.example.db.UserRole;
 import com.example.request.ArticleRequest;
-import com.example.request.Like;
 import com.example.request.Utils;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -30,136 +34,131 @@ public class ArticleController {
     @Autowired
     private ArticleService articleService;
 
-    @PostMapping("/article/create")
-    public @ResponseBody ResponseEntity<Object> create(@RequestBody ArticleRequest request) {
+    @Autowired
+    private UserService userService;
 
-        Optional<Article> articleOptional = articleService.create(request.username(),
-                request.password(), request.content());
-
-        if (!articleOptional.isPresent()) {
-            return Utils.returnFailure();
-        }
-
-        Article article = articleOptional.get();
-        HashMap<String, String> data = new HashMap<String, String>();
-        data.put("status", "success");
-        data.put("id", article.getID().toString());
-        return new ResponseEntity<>(data, HttpStatus.OK);
+    private User getCurrentUser(UserDetails userDetails) {
+        if (userDetails == null)
+            return null;
+        return userService.get(userDetails.getUsername()).orElse(null);
     }
 
-    @DeleteMapping("/article/delete")
-    public @ResponseBody ResponseEntity<Object> delete(@RequestParam Integer id,
-            @RequestParam String password) {
+    @PostMapping("/article/create")
+    @PreAuthorize("hasAuthority('Publisher') or hasAuthority('Moderator')")
+    public ResponseEntity<Object> create(@RequestBody ArticleRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = getCurrentUser(userDetails);
+        return articleService.create(currentUser, request.content())
+                .map(article -> {
+                    HashMap<String, String> data = new HashMap<>();
+                    data.put("status", "success");
+                    data.put("id", article.getID().toString());
+                    return new ResponseEntity<Object>(data, HttpStatus.OK);
+                }).orElse(Utils.returnFailure());
+    }
 
-        boolean success = articleService.delete(id, password);
-
-        if (!success) {
-            return Utils.returnFailure();
-        }
-
-        return Utils.returnSuccess();
+    @DeleteMapping("/article/{id}/delete")
+    @PreAuthorize("hasAuthority('Moderator') or (hasAuthority('Publisher') and @articleService.get(#id).get().getAuthor().getUsername() == #userDetails.getUsername())")
+    public ResponseEntity<Object> delete(@PathVariable Integer id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return articleService.delete(id) ? Utils.returnSuccess() : Utils.returnFailure();
     }
 
     @GetMapping("/article/{id}")
-    public @ResponseBody ResponseEntity<Object> get(@PathVariable Integer id) {
-        Optional<Article> articleOptional = articleService.get(id);
-
-        if (!articleOptional.isPresent()) {
-            return Utils.returnFailure();
-        }
-
-        Article article = articleOptional.get();
-        HashMap<String, Object> articleData = new HashMap<>();
-        articleData.put("id", article.getID());
-        articleData.put("content", article.getContent());
-        articleData.put("date", article.getDate());
-        articleData.put("author", article.getAuthor().getUsername());
-        return new ResponseEntity<>(articleData, HttpStatus.OK);
+    public ResponseEntity<Object> get(@PathVariable Integer id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = getCurrentUser(userDetails);
+        return articleService.get(id)
+                .map(article -> new ResponseEntity<Object>(formatArticleResponse(article, currentUser), HttpStatus.OK))
+                .orElse(Utils.returnFailure());
     }
 
     @PutMapping("article/{id}")
-    public @ResponseBody ResponseEntity<Object> modify(@PathVariable Integer id, @RequestBody ArticleRequest request) {
-        Optional<Article> articleOptional = articleService.modify(id, request.content(), request.password());
-
-        if (!articleOptional.isPresent()) {
-            return Utils.returnFailure();
-        }
-
-        Article article = articleOptional.get();
-        HashMap<String, Object> articleData = new HashMap<>();
-        articleData.put("status", "success");
-        articleData.put("id", article.getID());
-        articleData.put("content", article.getContent());
-        articleData.put("date", article.getDate());
-        articleData.put("author", article.getAuthor().getUsername());
-        return new ResponseEntity<>(articleData, HttpStatus.OK);
+    @PreAuthorize("hasAuthority('Publisher') and @articleService.get(#id).get().getAuthor().getUsername() == #userDetails.getUsername()")
+    public ResponseEntity<Object> modify(@PathVariable Integer id, @RequestBody ArticleRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return articleService.modify(id, request.content()).isPresent() ? Utils.returnSuccess() : Utils.returnFailure();
     }
 
     @GetMapping("/article")
-    public @ResponseBody ResponseEntity<Object> getAll() {
+    public ResponseEntity<Object> getAll(@AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = getCurrentUser(userDetails);
         ArrayList<Article> articles = articleService.getAll();
-        ArrayList<Object> data = new ArrayList<>();
-        articles.forEach(e -> {
-            HashMap<String, Object> articleData = new HashMap<>();
-            articleData.put("id", e.getID());
-            articleData.put("content", e.getContent());
-            articleData.put("date", e.getDate());
-            articleData.put("author", e.getAuthor().getUsername());
-
-            data.add(articleData);
-        });
+        ArrayList<Object> data = articles.stream()
+                .map(article -> formatArticleResponse(article, currentUser))
+                .collect(Collectors.toCollection(ArrayList::new));
         return new ResponseEntity<>(data, HttpStatus.OK);
     }
 
     @PostMapping("/article/{id}/like")
-    public @ResponseBody ResponseEntity<Object> like(@PathVariable Integer id, @RequestBody Like request) {
-        boolean success = articleService.like(id, request.username(), request.password());
-
-        if (!success) {
-            return Utils.returnFailure();
-        }
-
-        return Utils.returnSuccess();
+    public ResponseEntity<Object> like(@PathVariable Integer id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = getCurrentUser(userDetails);
+        return articleService.like(id, currentUser) ? Utils.returnSuccess() : Utils.returnFailure();
     }
 
     @PostMapping("/article/{id}/dislike")
-    public @ResponseBody ResponseEntity<Object> dislike(@PathVariable Integer id, @RequestBody Like request) {
-        boolean success = articleService.dislike(id, request.username(), request.password());
-
-        if (!success) {
-            return Utils.returnFailure();
-        }
-
-        return Utils.returnSuccess();
+    public ResponseEntity<Object> dislike(@PathVariable Integer id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = getCurrentUser(userDetails);
+        return articleService.dislike(id, currentUser) ? Utils.returnSuccess() : Utils.returnFailure();
     }
 
     @GetMapping("/article/{id}/like")
-    public @ResponseBody ResponseEntity<Object> like(@PathVariable Integer id) {
-        Optional<Map<String, Object>> likesOptional = articleService.getLikes(id);
-
-        if (!likesOptional.isPresent()) {
-            return Utils.returnFailure();
-        }
-
-        HashMap<String, Object> data = new HashMap<String, Object>();
-        data.put("status", "success");
-        data.putAll(likesOptional.get());
-
-        return new ResponseEntity<>(data, HttpStatus.OK);
+    public ResponseEntity<Object> getLikes(@PathVariable Integer id, @AuthenticationPrincipal UserDetails userDetails) {
+        User user = getCurrentUser(userDetails);
+        return articleService.getLikes(id)
+                .map((Map<String, Object> likes) -> {
+                    HashMap<String, Object> data = new HashMap<>();
+                    data.put("status", "success");
+                    if (user.getRole() == UserRole.Moderator) {
+                        data.putAll(likes);
+                    } else {
+                        Object count = likes.get("count");
+                        data.put("count", count);
+                    }
+                    return new ResponseEntity<Object>(data, HttpStatus.OK);
+                }).orElse(Utils.returnFailure());
     }
 
     @GetMapping("/article/{id}/dislike")
-    public @ResponseBody ResponseEntity<Object> dislike(@PathVariable Integer id) {
-        Optional<Map<String, Object>> dislikesOptional = articleService.getDislikes(id);
+    public ResponseEntity<Object> getDislikes(@PathVariable Integer id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = getCurrentUser(userDetails);
+        return articleService.getDislikes(id)
+                .map(dislikes -> {
+                    HashMap<String, Object> data = new HashMap<>();
+                    data.put("status", "success");
+                    if (user.getRole() == UserRole.Moderator) {
+                        data.putAll(dislikes);
+                    } else {
+                        Object count = dislikes.get("count");
+                        data.put("count", count);
+                    }
+                    return new ResponseEntity<Object>(data, HttpStatus.OK);
+                }).orElse(Utils.returnFailure());
+    }
 
-        if (!dislikesOptional.isPresent()) {
-            return Utils.returnFailure();
+    private Map<String, Object> formatArticleResponse(Article article, User currentUser) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", article.getID());
+        response.put("author", article.getAuthor().getUsername());
+        response.put("date", article.getDate());
+        response.put("content", article.getContent());
+
+        if (currentUser == null) {
+            // Unauthenticated user: Only base info
+            return response;
         }
 
-        HashMap<String, Object> data = new HashMap<String, Object>();
-        data.put("status", "success");
-        data.putAll(dislikesOptional.get());
-
-        return new ResponseEntity<>(data, HttpStatus.OK);
+        if (currentUser.getRole() == UserRole.Moderator) {
+            // Moderator: Full details
+            response.put("likes", articleService.getLikes(article.getID()).get());
+            response.put("dislikes", articleService.getDislikes(article.getID()).get());
+        } else if (currentUser.getRole() == UserRole.Publisher) {
+            response.put("total_likes", article.getLikesCount());
+            response.put("total_dislikes", article.getDislikesCount());
+        }
+        return response;
     }
 }

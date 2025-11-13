@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 
-@SpringBootApplication(scanBasePackages = {"com.example.demo", "com.example.controller", "com.example.db"})
+@SpringBootApplication(scanBasePackages = {"com.example.demo", "com.example.controller", "com.example.db", "com.example.security"})
 @RestController
 @EnableJpaRepositories("com.example.db")
 @EntityScan("com.example.db")
